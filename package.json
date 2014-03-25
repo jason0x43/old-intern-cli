@@ -1,0 +1,20 @@
+{
+	"name": "intern-cli",
+	"description": "Command line interface for the Intern",
+	"version": "0.1.1",
+	"author": {
+		"name": "Jason Cheatham"
+	},
+	"bin": {
+		"intern": "bin/intern"
+	},
+	"dependencies": {
+		"dashdash": "~1.4.0",
+		"findup-sync": "~0.1.0",
+		"resolve": "~0.6.0",
+		"ansi": "~0.2.0"
+	},
+	"devDependencies": {
+		"intern": "~1.5.0"
+	}
+}

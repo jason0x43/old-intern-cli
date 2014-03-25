@@ -1,0 +1,56 @@
+#!/usr/bin/env node
+
+'use strict';
+
+process.title = 'intern';
+
+var findup = require('findup-sync'),
+	resolve = require('resolve').sync,
+	fs = require('fs'),
+	cli = require('../lib/cli'),
+	options = cli.parseArgs(),
+	info = cli.info,
+	path = require('path'),
+	basedir = process.cwd(),
+	runType = 'client',
+	runner;
+
+if (options.version) {
+	cli.die('Intern CLI v0.1');
+}
+if (options.help || options._args.length !== 1) {
+	cli.help();
+}
+if (options.version || options.help) {
+	process.exit(0);
+}
+
+if (options.base && !options.intern) {
+	basedir = path.resolve(options.base);
+}
+else if (options.intern) {
+	basedir = path.resolve(path.dirname(options.intern));
+}
+
+if (options._args.length === 0) {
+	// missing config
+	cli.die('Missing config file');
+	process.exit(1);
+}
+
+var config = options._args[0];
+if (config.slice(-3) !== '.js') {
+	config += '.js';
+}
+if (!fs.existsSync(config)) {
+	cli.die('Missing config file "' + config + '"');
+}
+
+// make sure a local intern install is present
+if (!resolve('intern', { basedir: basedir })) {
+	cli.die('Unable to find local intern.', 99);
+}
+
+cli.run(options);
+
+// vim:filetype=javascript
