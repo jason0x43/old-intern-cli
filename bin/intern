@@ -1,56 +1,119 @@
 #!/usr/bin/env node
 
-'use strict';
-
 process.title = 'intern';
 
-var findup = require('findup-sync'),
-	resolve = require('resolve').sync,
-	fs = require('fs'),
+var fs = require('fs'),
 	cli = require('../lib/cli'),
-	options = cli.parseArgs(),
+	semver = require('semver'),
 	info = cli.info,
 	path = require('path'),
-	basedir = process.cwd(),
-	runType = 'client',
+	rc = cli.loadConfig(),
+	intern,
+	options,
+	config,
 	runner;
 
+// TODO: Improve configuration process: load rc file, then mix in command line
+// options, and use the resulting configuration object for everything
+
+intern = cli.loadInternPackage();
+if (!intern) {
+	cli.die('Missing local Intern', 1);
+}
+if (semver.gt(intern.package.version, '1.6.0')) {
+	cli.die('Intern 1.6.0 or above is required', 1);
+}
+
+try {
+	options = cli.parseArgs();
+} catch (e) {
+	cli.die(e.message, 1);
+}
+
+if (!rc.no_color && !options.no_color) {
+	cli.colorizeConsole({ debug: options.verbose });
+}
+
 if (options.version) {
-	cli.die('Intern CLI v0.1');
+	cli.die('Intern CLI v0.1\nIntern v' + intern.package.version);
 }
-if (options.help || options._args.length !== 1) {
-	cli.help();
-}
-if (options.version || options.help) {
-	process.exit(0);
+if (options.help) {
+	cli.die(cli.help());
 }
 
-if (options.base && !options.intern) {
-	basedir = path.resolve(options.base);
-}
-else if (options.intern) {
-	basedir = path.resolve(path.dirname(options.intern));
-}
-
-if (options._args.length === 0) {
-	// missing config
-	cli.die('Missing config file');
-	process.exit(1);
+// esure a config file was specified
+config =  options._args[0] || rc.config;
+if (!config) {
+	console.warn('Config file is required');
+	cli.die(cli.help(), 1);
 }
 
-var config = options._args[0];
-if (config.slice(-3) !== '.js') {
-	config += '.js';
+var configFile = config;
+if (configFile.slice(-3) !== '.js') {
+	configFile += '.js';
 }
-if (!fs.existsSync(config)) {
-	cli.die('Missing config file "' + config + '"');
-}
-
-// make sure a local intern install is present
-if (!resolve('intern', { basedir: basedir })) {
-	cli.die('Unable to find local intern.', 99);
+if (!fs.existsSync(configFile)) {
+	cli.die('Config file "' + configFile + '" does not exist');
 }
 
-cli.run(options);
+var isClient = options.client || rc.client,
+	runType = isClient ? 'client' : 'runner',
+	req = require(intern.path + '/node_modules/dojo/dojo');
+
+// clear and reset process.argv[2:] -- the only option we want is the config, everything else will be
+// modified in the config object directly
+process.argv = process.argv.slice(0, 2);
+process.argv.push('config=' + config);
+
+req([ config ], function (testConfig) {
+	if ( options.uninstrument || rc.uninstrument) {
+		// directly update the test config for instrumentation since the runner handles instrumentation
+		testConfig.excludeInstrumentation = /./;
+	}
+
+	if (options.suite || rc.suite) {
+		// suites have to be pushed onto argv because the remote doesn't share the same config object as the runner
+		var suiteBase = rc.suiteBase,
+			suites = (options.suite || rc.suite).map(function (suite) {
+				return suiteBase ? suiteBase + '/' + suite : suite;
+			});
+		for (var i = 0; i < suites.length; i++) {
+			process.argv.push('suites=' + suites[i]);
+		}
+	}
+
+	if (options.local || rc.local) {
+		testConfig.useSauceConnect = false;
+	}
+
+	if (options.keep_remote || rc.keep_remote) {
+		process.argv.push('leaveRemoteOpen');
+	}
+
+	if (options.proxy || rc.proxy) {
+		process.argv.push('proxyOnly');
+	}
+
+	// configure the loader (normally handled by Intern's runner and client)
+	global.__internConfig = {
+		baseUrl: process.cwd(),
+		packages: [
+			{ name: 'intern', location: process.cwd() + '/node_modules/intern' }
+		],
+		map: {
+			intern: {
+				dojo: 'intern/node_modules/dojo',
+				chai: 'intern/node_modules/chai/chai',
+				//sinon: 'intern/node_modules/sinon'
+			},
+			'*': {
+				'intern/dojo': 'intern/node_modules/dojo'
+			}
+		}
+	};
+
+	// start Intern
+	req(global.__internConfig, [ 'intern/' + runType ]);
+});
 
 // vim:filetype=javascript
