@@ -16,6 +16,10 @@ var fs = require('fs'),
 // TODO: Improve configuration process: load rc file, then mix in command line
 // options, and use the resulting configuration object for everything
 
+if (rc.projectRoot) {
+	process.chdir(rc.projectRoot);
+}
+
 intern = cli.loadInternPackage();
 if (!intern) {
 	cli.die('Missing local Intern', 1);
