@@ -7,18 +7,11 @@ var fs = require('fs'),
 	semver = require('semver'),
 	info = cli.info,
 	path = require('path'),
-	rc = cli.loadConfig(),
+	options = cli.init(),
 	intern,
 	options,
 	config,
 	runner;
-
-// TODO: Improve configuration process: load rc file, then mix in command line
-// options, and use the resulting configuration object for everything
-
-if (rc.projectRoot) {
-	process.chdir(rc.projectRoot);
-}
 
 intern = cli.loadInternPackage();
 if (!intern) {
@@ -28,16 +21,6 @@ if (semver.gt(intern.package.version, '1.6.0')) {
 	cli.die('Intern 1.6.0 or above is required', 1);
 }
 
-try {
-	options = cli.parseArgs();
-} catch (e) {
-	cli.die(e.message, 1);
-}
-
-if (!rc.no_color && !options.no_color) {
-	cli.colorizeConsole({ debug: options.verbose });
-}
-
 if (options.version) {
 	cli.die('Intern CLI v0.1\nIntern v' + intern.package.version);
 }
@@ -45,8 +28,16 @@ if (options.help) {
 	cli.die(cli.help());
 }
 
+if (!options.no_color) {
+	cli.colorizeConsole({ debug: options.verbose });
+}
+
+if (options.verbose) {
+	console.log('Options:', options);
+}
+
 // esure a config file was specified
-config =  options._args[0] || rc.config;
+config = options.config;
 if (!config) {
 	console.warn('Config file is required');
 	cli.die(cli.help(), 1);
@@ -60,8 +51,7 @@ if (!fs.existsSync(configFile)) {
 	cli.die('Config file "' + configFile + '" does not exist');
 }
 
-var isClient = options.client || rc.client,
-	runType = isClient ? 'client' : 'runner',
+var runType = options.client ? 'client' : 'runner',
 	req = require(intern.path + '/node_modules/dojo/dojo');
 
 // clear and reset process.argv[2:] -- the only option we want is the config, everything else will be
@@ -70,33 +60,67 @@ process.argv = process.argv.slice(0, 2);
 process.argv.push('config=' + config);
 
 req([ config ], function (testConfig) {
-	if ( options.uninstrument || rc.uninstrument) {
+	if ( options.no_instrument) {
 		// directly update the test config for instrumentation since the runner handles instrumentation
 		testConfig.excludeInstrumentation = /./;
 	}
 
-	if (options.suite || rc.suite) {
-		// suites have to be pushed onto argv because the remote doesn't share the same config object as the runner
-		var suiteBase = rc.suiteBase,
-			suites = (options.suite || rc.suite).map(function (suite) {
-				return suiteBase ? suiteBase + '/' + suite : suite;
-			});
-		for (var i = 0; i < suites.length; i++) {
-			process.argv.push('suites=' + suites[i]);
+	if (options.remote) {
+		var remote = options.remote.split(':');
+		testConfig.webdriver.host = remote[0];
+		if (remote.length > 1) {
+			testConfig.webdriver.port = remote[1];
 		}
 	}
 
-	if (options.local || rc.local) {
-		testConfig.useSauceConnect = false;
+	if (options.proxy) {
+		var proxy = options.proxy.split(':'),
+			port = testConfig.proxyPort;
+		if (proxy.length > 1) {
+			port = Number(proxy[1]);
+		}
+		testConfig.proxyPort = Number(port);
+		testConfig.proxyUrl = 'http://' + proxy[0] + ':' + port;
 	}
 
-	if (options.keep_remote || rc.keep_remote) {
+	if (options.browser) {
+		testConfig.environments = [];
+		options.browser.forEach(function (name) {
+			testConfig.environments.push({ browserName: name });
+		});
+	}
+
+	testConfig.useSauceConnect = options.sauce;
+	if (options.sauce_user) {
+		testConfig.webdriver.username = options.sauce_user;
+	}
+	if (options.sauce_key) {
+		testConfig.webdriver.accessKey = options.sauce_key;
+	}
+
+	if (options.suite) {
+		// suites have to be pushed onto argv because the remote doesn't share the same config object as the runner
+		options.suite.forEach(function (suite) {
+			suite = options.suiteBase ? options.suiteBase + '/' + suite : suite;
+			process.argv.push('suites=' + suite);
+		});
+	}
+
+	if (options.reporter) {
+		options.reporter.forEach(function (name) {
+			process.argv.push('reporters=' + name);
+		});
+	}
+
+	if (options.keep_remote) {
 		process.argv.push('leaveRemoteOpen');
 	}
 
-	if (options.proxy || rc.proxy) {
+	if (options.proxy_ony) {
 		process.argv.push('proxyOnly');
 	}
+
+	testConfig.monkeyFun = 'yes';
 
 	// configure the loader (normally handled by Intern's runner and client)
 	global.__internConfig = {
@@ -115,6 +139,10 @@ req([ config ], function (testConfig) {
 			}
 		}
 	};
+
+	if (options.verbose) {
+		console.log('Intern configuration:', testConfig);
+	}
 
 	// start Intern
 	req(global.__internConfig, [ 'intern/' + runType ]);
