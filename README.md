@@ -20,7 +20,6 @@ options:
     -V, --version                       Show the version number and exit
     -b NAME, --browser=NAME             Use this browser (e.g., "chrome") when
                                         testing locally (can be repeated)
-    -c, --client                        Use Node.js client instead of WebDriver
     -h, --help                          Show a help message and exit
     -I, --no-instrument                 Disable instrumentation
     -k, --keep-remote                   Do not close remote after tests are
@@ -42,6 +41,8 @@ options:
                                         SAUCE_USERNAME=ARG
     --sauce-key=ARG                     Sauce Labs API key. Environment:
                                         SAUCE_ACCESS_KEY=ARG
+    -w, --webdriver                     Use WebDriver instead of the Node.js
+                                        client
     -v, --verbose                       Be more verbose; show debugging messages
     -C, --no-color                      Disable terminal color support
 ```
@@ -50,13 +51,17 @@ options:
 
 `intern tests/intern`
 
+* Run tests in a browser
+
+`intern tests/intern -s app/tests/foo -w`
+
 * Run a particular suite
 
 `intern tests/intern -s app/tests/foo`
 
 ## Configuration
 
-You can store default values for options in a JSON-formatted `.internrc` file in your project. In addition to the long options above, this file may also contain `config` and `suiteBase` options. For example:
+You can store default values for options in a JSON-formatted `.internrc` file in your project root directory. In addition to the long options above, this file may also contain `config` and `suiteBase` options. For example:
 
 ```
 {
@@ -65,6 +70,12 @@ You can store default values for options in a JSON-formatted `.internrc` file in
 }
 ```
 
-Setting these will let you run your default tests just by typing `intern`. You could run the `foo` suite with just:
+`config` is your default Intern config. You can still override it by providing a config on the command line.
+
+`suiteBase` is the base module path for your tests. For example, if your test suites were all under the `myapp/foo` base module identifier, you could could set `suiteBase` to `myapp/foo` and then just use the rest of a suite module ID on the command line. So you could use
 
 `intern -s foo`
+
+instead of
+
+`intern -s myapp/tests/foo`
