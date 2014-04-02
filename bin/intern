@@ -17,7 +17,7 @@ intern = cli.loadInternPackage();
 if (!intern) {
 	cli.die('Missing local Intern', 1);
 }
-if (semver.gt(intern.package.version, '1.6.0')) {
+if (semver.lt(intern.package.version, '1.6.0')) {
 	cli.die('Intern 1.6.0 or above is required', 1);
 }
 
