@@ -4,20 +4,21 @@ process.title = 'intern';
 
 var fs = require('fs'),
 	cli = require('../lib/cli'),
-	semver = require('semver'),
-	info = cli.info,
-	path = require('path'),
-	options = cli.init(),
 	relative = require('require-relative'),
+	semver = require('semver'),
+	path = require('path'),
+	package = require('../package.json'),
+	options = cli.init(),
 	intern,
 	options,
 	config,
 	runner;
 
-if (options.projectRoot) {
-	process.chdir(options.projectRoot);
+function packageString(package) {
+	return package.name + ' v' + package.version;
 }
 
+// make sure we have a local intern
 intern = cli.findIntern();
 if (!intern) {
 	cli.die('Missing local Intern', 1);
@@ -27,7 +28,7 @@ if (semver.lt(intern.package.version, '1.6.0')) {
 }
 
 if (options.version) {
-	cli.die('Intern CLI v0.1\nIntern v' + intern.package.version);
+	cli.die(packageString(package) + '\n' + packageString(intern.package));
 }
 if (options.help) {
 	cli.die(cli.help());
@@ -40,7 +41,7 @@ if (!options.no_color) {
 if (options.verbose) {
 	console.log('Intern path:  ', intern.path);
 	console.log('Intern name:  ', intern.package.name);
-	console.log('Options:      ', options);
+	console.log('Options:\n', options);
 }
 
 // esure a config file was specified
@@ -50,6 +51,7 @@ if (!config) {
 	cli.die(cli.help(), 1);
 }
 
+// make sure the test config file exits
 var configFile = config;
 if (configFile.slice(-3) !== '.js') {
 	configFile += '.js';
@@ -69,7 +71,6 @@ var internConfig = global.__internConfig = {
 		intern: {
 			dojo: 'intern/node_modules/dojo',
 			chai: 'intern/node_modules/chai/chai',
-			//sinon: 'intern/node_modules/sinon'
 		},
 		'*': {
 			'intern/dojo': 'intern/node_modules/dojo'
@@ -85,8 +86,8 @@ global.__cliConfig = {
 	runType: (options.webdriver || options.sauce || intern.isGeezer) ? 'runner' : 'client'
 };
 
+// if we're using geezer, update the config for the standard Dojo loader used by geezer
 if (intern.isGeezer) {
-	// update the config for the standard Dojo loader used by geezer
 	global.dojoConfig = internConfig;
 	internConfig.async = true;
 	internConfig.tlmSiblingOfDojo = false;
@@ -94,8 +95,13 @@ if (intern.isGeezer) {
 	internConfig.deps = [ 'intern-cli/lib/runner' ];
 }
 
-// clear and reset process.argv[2:] -- the only option we want is the config, everything else will be
-// modified in the config object directly
+// work from the current project root
+if (options.projectRoot) {
+	process.chdir(options.projectRoot);
+}
+
+// clear and reset process.argv[2:] -- the only option we want is the config, everything else will be modified in the
+// config object directly
 process.argv = process.argv.slice(0, 2);
 process.argv.push('config=' + config);
 
