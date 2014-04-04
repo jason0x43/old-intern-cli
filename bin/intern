@@ -8,21 +8,23 @@ var fs = require('fs'),
 	info = cli.info,
 	path = require('path'),
 	options = cli.init(),
-	isGeezer = false,
+	relative = require('require-relative'),
 	intern,
 	options,
 	config,
 	runner;
 
-intern = cli.loadInternPackage();
+if (options.projectRoot) {
+	process.chdir(options.projectRoot);
+}
+
+intern = cli.findIntern();
 if (!intern) {
 	cli.die('Missing local Intern', 1);
 }
 if (semver.lt(intern.package.version, '1.6.0')) {
 	cli.die('Intern 1.6.0 or above is required', 1);
 }
-
-isGeezer = intern.package.name === 'intern-geezer';
 
 if (options.version) {
 	cli.die('Intern CLI v0.1\nIntern v' + intern.package.version);
@@ -56,11 +58,40 @@ if (!fs.existsSync(configFile)) {
 	cli.die('Config file "' + configFile + '" does not exist');
 }
 
-var runType = 'client',
-	req = require(intern.path + '/node_modules/dojo/dojo');
+// configure the Dojo loader (normally handled by Intern's runner and client)
+var internConfig = global.__internConfig = {
+	baseUrl: process.cwd(),
+	packages: [
+		{ name: 'intern', location: intern.path },
+		{ name: 'intern-cli', location: path.join(__dirname, '..') }
+	],
+	map: {
+		intern: {
+			dojo: 'intern/node_modules/dojo',
+			chai: 'intern/node_modules/chai/chai',
+			//sinon: 'intern/node_modules/sinon'
+		},
+		'*': {
+			'intern/dojo': 'intern/node_modules/dojo'
+		}
+	}
+};
 
-if (options.webdriver || options.sauce) {
-	runType = 'runner';
+// setup a config object to transfer setup information to the runner module
+global.__cliConfig = {
+	options: options,
+	config: config,
+	intern: intern,
+	runType: (options.webdriver || options.sauce || intern.isGeezer) ? 'runner' : 'client'
+};
+
+if (intern.isGeezer) {
+	// update the config for the standard Dojo loader used by geezer
+	global.dojoConfig = internConfig;
+	internConfig.async = true;
+	internConfig.tlmSiblingOfDojo = false;
+	internConfig.useDeferredInstrumentation = false;
+	internConfig.deps = [ 'intern-cli/lib/runner' ];
 }
 
 // clear and reset process.argv[2:] -- the only option we want is the config, everything else will be
@@ -68,115 +99,12 @@ if (options.webdriver || options.sauce) {
 process.argv = process.argv.slice(0, 2);
 process.argv.push('config=' + config);
 
-req([ config ], function (testConfig) {
-	// 
-	// Update the testConfig directly for options that pertain only to the runner
-	//
+// load the Dojo loader
+var req = relative('dojo/dojo', intern.path);
 
-	if ( options.no_instrument) {
-		testConfig.excludeInstrumentation = /./;
-	}
-
-	if (options.remote) {
-		var remote = options.remote.split(':');
-		testConfig.webdriver.host = remote[0];
-		if (remote.length > 1) {
-			testConfig.webdriver.port = remote[1];
-		}
-	}
-
-	if (options.proxy) {
-		var proxy = options.proxy.split(':'),
-			port = testConfig.proxyPort;
-		if (proxy.length > 1) {
-			port = Number(proxy[1]);
-		}
-		testConfig.proxyPort = Number(port);
-		testConfig.proxyUrl = 'http://' + proxy[0] + ':' + port;
-	}
-
-	if (options.browser) {
-		testConfig.environments = [];
-		options.browser.forEach(function (name) {
-			testConfig.environments.push({ browserName: name });
-		});
-	}
-
-	testConfig.useSauceConnect = options.sauce;
-	if (options.sauce_user) {
-		testConfig.webdriver.username = options.sauce_user;
-	}
-	if (options.sauce_key) {
-		testConfig.webdriver.accessKey = options.sauce_key;
-	}
-
-	//
-	// Update the process arguments for options that pertain to the client
-	//
-
-	if (options.suite) {
-		options.suite.forEach(function (suite) {
-			suite = options.suiteBase ? options.suiteBase + '/' + suite : suite;
-			process.argv.push('suites=' + suite);
-		});
-	}
-
-	if (options.reporter) {
-		options.reporter.forEach(function (name) {
-			process.argv.push('reporters=' + name);
-		});
-	}
-
-	if (options.keep_remote) {
-		process.argv.push('leaveRemoteOpen');
-	}
-
-	if (options.proxy_only) {
-		process.argv.push('proxyOnly');
-	}
-
-	if (options.arg) {
-		options.args.forEach(function (arg) {
-			process.argv.push(arg);
-		});
-	}
-
-	// configure the loader (normally handled by Intern's runner and client)
-	var internConfig = global.__internConfig = {
-		baseUrl: process.cwd(),
-		packages: [
-			{ name: 'intern', location: intern.path }
-		],
-		map: {
-			intern: {
-				dojo: 'intern/node_modules/dojo',
-				chai: 'intern/node_modules/chai/chai',
-				//sinon: 'intern/node_modules/sinon'
-			},
-			'*': {
-				'intern/dojo': 'intern/node_modules/dojo'
-			}
-		}
-	};
-
-	if (isGeezer) {
-		internConfig.async = true;
-		internConfig.deps = [ 'intern/runner' ];
-		internConfig.tlmSiblingOfDojo = false;
-		internConfig.useDeferredInstrumentation = false;
-	}
-
-	if (options.verbose) {
-		console.log('Intern configuration:', testConfig);
-	}
-
-	// start Intern
-	if (isGeezer) {
-		req(global.__internConfig, [ 'dojo/dojo' ]);
-	}
-	else {
-		req(global.__internConfig, [ 'intern/' + runType ]);
-	}
-});
+// if this is not geezer, load the runner; if it is geezer, the runner was automatically loaded
+if (!intern.isGeezer) {
+	req(internConfig, [ 'intern-cli/lib/runner' ]);
+}
 
 // vim:filetype=javascript
