@@ -39,6 +39,7 @@ if (!options.no_color) {
 }
 
 if (options.verbose) {
+	console.log('----------------------------------------------------------');
 	console.log('Intern path:  ', intern.path);
 	console.log('Intern name:  ', intern.package.name);
 	console.log('Options:\n', options);
