@@ -105,6 +105,9 @@ if (intern.isGeezer) {
 // config object directly
 process.argv = process.argv.slice(0, 2);
 process.argv.push('config=' + config);
+if (options._args) {
+	process.argv = process.argv.concat(options._args);
+}
 
 // load the Dojo loader
 var req = relative('dojo/dojo', intern.path);
