@@ -18,13 +18,18 @@ function packageString(package) {
 	return package.name + ' v' + package.version;
 }
 
+// work from the current project root
+if (options.projectRoot) {
+	process.chdir(options.projectRoot);
+}
+
 // make sure we have a local intern
 intern = cli.findIntern();
 if (!intern) {
 	cli.die('Missing local Intern', 1);
 }
 if (semver.lt(intern.package.version, '1.6.0')) {
-	cli.die('Intern 1.6.0 or above is required', 1);
+	cli.die('Intern 1.6.0 or above is required, found ' + intern.package.version, 1);
 }
 
 if (options.version) {
@@ -50,11 +55,6 @@ config = options.config;
 if (!config) {
 	console.warn('Config file is required');
 	cli.die(cli.help(), 1);
-}
-
-// work from the current project root
-if (options.projectRoot) {
-	process.chdir(options.projectRoot);
 }
 
 // make sure the test config file exits
