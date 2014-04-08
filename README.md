@@ -15,11 +15,13 @@ Tired of typing `node node_modules/intern/.bin/runner`? Wish Intern's command li
 ## Usage
 
 ```
-usage: intern CONFIG [OPTIONS]
+usage: intern [OPTIONS] [ARG [ARG [...]]]
 options:
     -V, --version                       Show the version number and exit
     -b NAME, --browser=NAME             Use this browser (e.g., "chrome") when
                                         testing locally (can be repeated)
+    -c ARG, --config=ARG                Intern config to use (e.g.,
+                                        "tests/intern")
     -h, --help                          Show a help message and exit
     -I, --no-instrument                 Disable instrumentation
     -k, --keep-remote                   Do not close remote after tests are
@@ -61,7 +63,7 @@ options:
 
 ## Configuration
 
-You can store default values for options in a JSON-formatted `.internrc` file in your project root directory. In addition to the long options above, this file may also contain `config` and `suiteBase` options. For example:
+You can store default values for options in a JSON-formatted `.internrc` files in your project root directory and in your home directory. In addition to the long options above, this file may also contain `config` and `suiteBase` options. For example:
 
 ```
 {
@@ -70,7 +72,11 @@ You can store default values for options in a JSON-formatted `.internrc` file in
 }
 ```
 
+### config
+
 `config` is your default Intern config. You can still override it by providing a config on the command line.
+
+### suiteBase
 
 `suiteBase` is the base module path for your tests. For example, if your test suites were all under the `myapp/foo` base module identifier, you could could set `suiteBase` to `myapp/foo` and then just use the rest of a suite module ID on the command line. So you could use
 
