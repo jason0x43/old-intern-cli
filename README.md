@@ -5,8 +5,9 @@ An enhanced command line front-end for Intern
 ## Features
 
 * Start Intern from anywhere in a project tree
-* Easily disable instrumentation
+* Access all intern options from the command line
 * Test locally by default
+* Colorized output
 
 ## Installation
 
