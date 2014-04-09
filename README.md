@@ -1,6 +1,6 @@
 # intern-cli
 
-Tired of typing `node node_modules/intern/.bin/runner`? Wish Intern's command line arguments were a bit more concise? Want to change an option without rewriting a config file? Try intern-cli.
+An enhanced command line front-end for Intern
 
 ## Features
 
@@ -18,24 +18,25 @@ Tired of typing `node node_modules/intern/.bin/runner`? Wish Intern's command li
 usage: intern [OPTIONS] [ARG [ARG [...]]]
 options:
     -V, --version                       Show the version number and exit
-    -b NAME, --browser=NAME             Use this browser (e.g., "chrome") when
-                                        testing locally (can be repeated)
+    -b NAME, --browser=NAME             Test in this browser, e.g., "chrome" or
+                                        "{ b: 'chrome', v: '32' }" (can be
+                                        repeated)
     -c ARG, --config=ARG                Intern config to use (e.g.,
                                         "tests/intern")
     -h, --help                          Show a help message and exit
     -I, --no-instrument                 Disable instrumentation
     -k, --keep-remote                   Do not close remote after tests are
                                         finished
-    -o, --proxy-only                    Start Intern in "proxy only" mode (don't
-                                        run tests)
-    -p ARG, --proxy=ARG                 Address:port of the test proxy server
-                                        (that a remote system should connect
-                                        back to)
+    -p ADDRESS[:PORT], --proxy=ADDRESS[:PORT]
+                                        Address:port that remote test runners
+                                        should connect back to
     -r ADDRESS[:PORT], --remote=ADDRESS[:PORT]
                                         Address:port of remote host to use for
                                         WebDriver tests
     -R NAME, --reporter=NAME            Specify a reporter to use (can be
                                         repeated)
+    -e, --server                        Start Intern in "server" mode (only run
+                                        the proxy, don't run tests)
     -s NAME, --suite=NAME               A specific suite to test (can be
                                         repeated)
     -S, --sauce                         Use Sauce Labs to run tests
@@ -63,7 +64,7 @@ options:
 
 ## Configuration
 
-You can store default values for options in a JSON-formatted `.internrc` files in your project root directory and in your home directory. In addition to the long options above, this file may also contain `config` and `suiteBase` options. For example:
+You can store default values for options in a JSON-formatted `.internrc` files in your home directory and in a `internrc.json` file in your project `node_modules` directory. If both files exist, settings in the project file will take precedence over the global file. In addition to the long options above, this file may also contain `config` and `suiteBase` options. For example:
 
 ```
 {
