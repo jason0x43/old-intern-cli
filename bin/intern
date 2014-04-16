@@ -8,7 +8,7 @@ var fs = require('fs'),
 	semver = require('semver'),
 	path = require('path'),
 	package = require('../package.json'),
-	options = cli.init(),
+	options,
 	intern,
 	options,
 	config,
@@ -16,6 +16,12 @@ var fs = require('fs'),
 
 function packageString(package) {
 	return package.name + ' v' + package.version;
+}
+
+try {
+	options = cli.init();
+} catch (e) {
+	cli.die('Error: ' + e.message);
 }
 
 // work from the current project root
@@ -88,8 +94,7 @@ var internConfig = global.__internConfig = {
 global.__cliConfig = {
 	options: options,
 	config: config,
-	intern: intern,
-	runType: (options.webdriver || options.sauce || intern.isGeezer) ? 'runner' : 'client'
+	intern: intern
 };
 
 // if we're using geezer, update the config for the standard Dojo loader used by geezer
