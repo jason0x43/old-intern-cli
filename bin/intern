@@ -32,7 +32,12 @@ if (options.projectRoot) {
 // make sure we have a local intern
 intern = cli.findIntern();
 if (!intern) {
-	cli.die('Missing local Intern', 1);
+	console.log('A local copy of Intern needs to be installed in this project. Install');
+	console.log('it with the command:\n');
+	console.log('  npm install intern --save-deps\n');
+	console.log('The --save-deps option will add intern to the dependencies list in');
+	console.log('your package.json file.');
+	process.exit(1);
 }
 if (semver.lt(intern.package.version, '1.6.0')) {
 	cli.die('Intern 1.6.0 or above is required, found ' + intern.package.version, 1);
@@ -73,6 +78,7 @@ if (!fs.existsSync(configFile)) {
 }
 
 // configure the Dojo loader (normally handled by Intern's runner and client)
+global.window = {};
 var internConfig = global.__internConfig = {
 	baseUrl: process.cwd(),
 	packages: [
@@ -83,6 +89,8 @@ var internConfig = global.__internConfig = {
 		intern: {
 			dojo: 'intern/node_modules/dojo',
 			chai: 'intern/node_modules/chai/chai',
+			cucumber: 'intern/node_modules/cucumber/release/cucumber',
+			sinon: 'intern/node_modules/sinon/lib/sinon'
 		},
 		'*': {
 			'intern/dojo': 'intern/node_modules/dojo'
