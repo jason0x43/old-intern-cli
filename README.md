@@ -24,10 +24,13 @@ options:
                                         repeated)
     -c ARG, --config=ARG                Intern config to use (e.g.,
                                         "tests/intern")
+    -g ARG, --grep=ARG                  Filter the tests and suites that will
+                                        run
     -h, --help                          Show a help message and exit
     -I, --no-instrument                 Disable instrumentation
     -k, --keep-remote                   Do not close remote after tests are
                                         finished
+    -l, --list                          List available tests, but don't run them
     -p ADDRESS[:PORT], --proxy=ADDRESS[:PORT]
                                         Address:port that remote test runners
                                         should connect back to
