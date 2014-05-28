@@ -2,17 +2,17 @@
 
 process.title = 'intern';
 
-var fs = require('fs'),
-	cli = require('../lib/cli'),
-	relative = require('require-relative'),
-	semver = require('semver'),
-	path = require('path'),
-	package = require('../package.json'),
-	options,
-	intern,
-	options,
-	config,
-	runner;
+var fs = require('fs');
+var cli = require('../lib/cli');
+var relative = require('require-relative');
+var semver = require('semver');
+var path = require('path');
+var package = require('../package.json');
+var options;
+var intern;
+var options;
+var config;
+var runner;
 
 function packageString(package) {
 	return package.name + ' v' + package.version;
